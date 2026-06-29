@@ -242,6 +242,3 @@ docker compose up -d
 # View real-time logs across all services
 docker compose logs -f
 ```
-#   c o d e - r e v i e w - a g e n t 
- 
- 
