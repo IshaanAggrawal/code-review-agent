@@ -1,4 +1,4 @@
-# Aegis: Enterprise Agentic Code Review System
+# Code Review Agent
 
 Aegis is a production-ready, asynchronous multi-agent orchestrator designed to automate code reviews on pull requests. Powered by LangGraph and FastAPI, the system analyzes pull requests concurrently using specialized domain agents, synthesizes the findings, and publishes actionable code review reports directly to GitHub.
 
