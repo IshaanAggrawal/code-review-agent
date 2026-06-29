@@ -1,0 +1,79 @@
+networks:
+  pr_review_net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  app_logs:
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: pr_review_redis
+    restart: unless-stopped
+    networks:
+      - pr_review_net
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pr-review-agent
+    container_name: pr_review_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - pr_review_net
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 1
+      --log-level info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pr-review-agent
+    container_name: pr_review_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - pr_review_net
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    command: arq app.jobs.review_executor.WorkerSettings
